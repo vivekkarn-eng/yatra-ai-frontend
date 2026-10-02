@@ -18,6 +18,9 @@ class YatraStoryVisual extends StatefulWidget {
   final VoidCallback onRetry;
   final VoidCallback onBack;
 
+  final List<Map<String, String>> nearbyPlaces;
+  final ValueChanged<Map<String, String>> onExplorePlace;
+
   const YatraStoryVisual({
     super.key,
     required this.name,
@@ -30,6 +33,8 @@ class YatraStoryVisual extends StatefulWidget {
     required this.error,
     required this.onRetry,
     required this.onBack,
+    required this.nearbyPlaces,
+    required this.onExplorePlace,
   });
 
   @override
@@ -150,7 +155,11 @@ class _YatraStoryVisualState extends State<YatraStoryVisual>
 
                           ..._buildSections(),
 
-                          const SizedBox(height: 22),
+                          if (widget.nearbyPlaces.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            _buildExploreAround(),
+                            const SizedBox(height: 22),
+                          ],
 
                           _buildGeneratedFooter(),
                         ],
@@ -932,6 +941,222 @@ class _YatraStoryVisualState extends State<YatraStoryVisual>
           ),
         ),
       ],
+    );
+  }
+
+
+  // ================================================================
+  // EXPLORE AROUND
+  // ================================================================
+
+  Widget _buildExploreAround() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: _paper.withOpacity(0.96),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: _gold.withOpacity(0.55),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.14),
+            blurRadius: 16,
+            offset: const Offset(3, 7),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -18,
+            top: -18,
+            child: Icon(
+              Icons.explore_outlined,
+              size: 105,
+              color: _gold.withOpacity(0.075),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(19, 19, 19, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 43,
+                      height: 43,
+                      decoration: BoxDecoration(
+                        color: _terracotta.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _terracotta.withOpacity(0.28),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.explore_rounded,
+                        color: Color(0xFFA6532A),
+                        size: 21,
+                      ),
+                    ),
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'EXPLORE AROUND',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.5,
+                              color: _terracotta,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'More heritage places in ${widget.city}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.cormorantGaramond(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: _ink.withOpacity(0.78),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 17),
+                ...widget.nearbyPlaces.map(
+                  (place) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _buildExplorePlaceTile(place),
+                  ),
+                ),
+                const SizedBox(height: 3),
+                _buildOrnamentalDivider(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExplorePlaceTile(Map<String, String> place) {
+    final name = place['name'] ?? 'Heritage Place';
+    final image = place['image'] ?? '';
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => widget.onExplorePlace(place),
+        borderRadius: BorderRadius.circular(13),
+        child: Container(
+          padding: const EdgeInsets.all(9),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE7C88E).withOpacity(0.28),
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(
+              color: _gold.withOpacity(0.32),
+            ),
+          ),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(9),
+                child: SizedBox(
+                  width: 68,
+                  height: 62,
+                  child: image.isNotEmpty
+                      ? Image.asset(
+                          image,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) {
+                            return _exploreImageFallback();
+                          },
+                        )
+                      : _exploreImageFallback(),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.cormorantGaramond(
+                        fontSize: 20,
+                        height: 1.05,
+                        fontWeight: FontWeight.w700,
+                        color: _ink,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_rounded,
+                          size: 12,
+                          color: _terracotta,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            place['city'] ?? widget.city,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: _terracotta,
+                              letterSpacing: 0.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: _terracotta,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _exploreImageFallback() {
+    return Container(
+      color: const Color(0xFFC38A57),
+      child: const Center(
+        child: Icon(
+          Icons.account_balance_rounded,
+          color: Colors.white70,
+          size: 28,
+        ),
+      ),
     );
   }
 

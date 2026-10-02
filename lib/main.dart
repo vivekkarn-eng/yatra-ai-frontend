@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'screens/recognition_result_screen.dart';
 import 'screens/scanner_screen.dart';
 import 'screens/explore_screen.dart';
+import 'screens/map_screen.dart';
 import 'screens/saved_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/place_story_screen.dart';
@@ -339,7 +340,7 @@ class _HomeScreenState extends State<HomeScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => const ExploreScreen(),
+          builder: (_) => const MapScreen(),
         ),
       );
     } else if (index == 2) {

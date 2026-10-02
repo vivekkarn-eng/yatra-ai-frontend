@@ -162,6 +162,35 @@ class _PlaceStoryScreenState extends State<PlaceStoryScreen> {
   }
 
   // ==========================================================
+  // EXPLORE AROUND
+  // ==========================================================
+
+  List<Map<String, String>> _explorePlaces() {
+    final currentName = widget.place['name'] ?? '';
+    final currentCity = widget.place['city'] ?? '';
+
+    return YatraPlaces.all
+        .where(
+          (place) =>
+              place['city'] == currentCity &&
+              place['name'] != currentName,
+        )
+        .take(4)
+        .toList();
+  }
+
+  void _openExplorePlace(Map<String, String> place) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PlaceStoryScreen(
+          place: place,
+        ),
+      ),
+    );
+  }
+
+  // ==========================================================
   // BUILD PREMIUM YATRA STORY SCREEN
   // ==========================================================
 
@@ -200,6 +229,8 @@ class _PlaceStoryScreenState extends State<PlaceStoryScreen> {
       onBack: () {
         Navigator.pop(context);
       },
+      nearbyPlaces: _explorePlaces(),
+      onExplorePlace: _openExplorePlace,
     );
   }
 }

@@ -21,7 +21,7 @@ class YatraBottomNav extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           // =====================================================
-          // OLD MAP PANEL
+          // YATRA MAP-STYLE NAVIGATION PANEL
           // =====================================================
 
           Positioned(
@@ -34,8 +34,7 @@ class YatraBottomNav extends StatelessWidget {
                 color: const Color(0xFFE7D0A2),
                 border: Border(
                   top: BorderSide(
-                    color: const Color(0xFF8E623D)
-                        .withOpacity(0.75),
+                    color: const Color(0xFF8E623D).withOpacity(0.75),
                     width: 1.2,
                   ),
                 ),
@@ -58,6 +57,10 @@ class YatraBottomNav extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
+                      // =================================================
+                      // HOME
+                      // =================================================
+
                       Expanded(
                         child: _MapNavItem(
                           icon: Icons.home_outlined,
@@ -68,18 +71,29 @@ class YatraBottomNav extends StatelessWidget {
                         ),
                       ),
 
+                      // =================================================
+                      // MAP
+                      // =================================================
+
                       Expanded(
                         child: _MapNavItem(
-                          icon: Icons.explore_outlined,
-                          selectedIcon: Icons.explore_rounded,
-                          label: 'Explore',
+                          icon: Icons.map_outlined,
+                          selectedIcon: Icons.map_rounded,
+                          label: 'Map',
                           selected: selectedIndex == 1,
                           onTap: () => onItemSelected(1),
                         ),
                       ),
 
-                      // SPACE RESERVED FOR FLOATING CAPSULE
+                      // =================================================
+                      // SPACE FOR FLOATING SCAN CAPSULE
+                      // =================================================
+
                       const SizedBox(width: 116),
+
+                      // =================================================
+                      // SAVED
+                      // =================================================
 
                       Expanded(
                         child: _MapNavItem(
@@ -90,6 +104,10 @@ class YatraBottomNav extends StatelessWidget {
                           onTap: () => onItemSelected(2),
                         ),
                       ),
+
+                      // =================================================
+                      // PROFILE
+                      // =================================================
 
                       Expanded(
                         child: _MapNavItem(
@@ -108,7 +126,7 @@ class YatraBottomNav extends StatelessWidget {
           ),
 
           // =====================================================
-          // FLOATING YATRA CAPSULE
+          // FLOATING YATRA SCAN CAPSULE
           // =====================================================
 
           Positioned(
@@ -330,7 +348,9 @@ class _YatraScanCapsuleState extends State<_YatraScanCapsule> {
                         color: const Color(0xFFFFF4DC),
                       ),
                     ),
+
                     const SizedBox(height: 2),
+
                     Text(
                       'SCAN',
                       style: GoogleFonts.poppins(
@@ -538,7 +558,14 @@ class _OldMapPainter extends CustomPainter {
     // CORNER ORNAMENTS
     // =========================================================
 
-    _corner(canvas, const Offset(9, 9), faded, true, true);
+    _corner(
+      canvas,
+      const Offset(9, 9),
+      faded,
+      true,
+      true,
+    );
+
     _corner(
       canvas,
       Offset(size.width - 9, 9),
@@ -546,6 +573,7 @@ class _OldMapPainter extends CustomPainter {
       false,
       true,
     );
+
     _corner(
       canvas,
       Offset(9, size.height - 9),
@@ -553,6 +581,7 @@ class _OldMapPainter extends CustomPainter {
       true,
       false,
     );
+
     _corner(
       canvas,
       Offset(size.width - 9, size.height - 9),
