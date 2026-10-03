@@ -227,11 +227,11 @@ class _HomeScreenState extends State<HomeScreen> {
     },
     {
       'name': 'Mysuru',
-      'image': 'assets/images/mysore_palace.jpg',
+      'image': 'assets/images/mysore_palace.jpeg',
     },
     {
       'name': 'Bhopal',
-      'image': 'assets/images/taj_ul_masajid_bhopal.jpg',
+      'image': 'assets/images/taj_ul_masajid_bhopal.jpeg',
     },
   ];
 

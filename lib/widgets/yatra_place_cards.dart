@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/place_data.dart';
+import '../screens/explore_screen.dart';
 
 class YatraPlaceCards extends StatefulWidget {
   final List<Map<String, String>> places;
@@ -105,10 +106,23 @@ class _YatraPlaceCardsState extends State<YatraPlaceCards> {
               ],
             ),
           ),
-          const Icon(
-            Icons.arrow_forward_rounded,
-            color: Color(0xFF6F5139),
-            size: 21,
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const ExploreScreen(),
+                ),
+              );
+            },
+            child: const Padding(
+              padding: EdgeInsets.all(6),
+              child: Icon(
+                Icons.arrow_forward_rounded,
+                color: Color(0xFF6F5139),
+                size: 21,
+              ),
+            ),
           ),
         ],
       ),

@@ -55,7 +55,7 @@ class _YatraDiscoverCardState
     {
       'name': 'Mysore Palace',
       'location': 'Karnataka',
-      'image': 'assets/images/mysore_palace.jpg',
+      'image': 'assets/images/mysore_palace.jpeg',
       'tag': 'ROYAL HERITAGE',
       'description':
           'A magnificent royal residence known for its illuminated façade, grand halls and Indo-Saracenic design.',
