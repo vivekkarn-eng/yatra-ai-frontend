@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -45,6 +49,15 @@ class _MapScreenState extends State<MapScreen> {
 
   String? _selectedPlace;
   String? _selectedCity;
+
+  StreamSubscription<Position>? _positionSubscription;
+  Line? _routeLine;
+  String? _routeOriginName;
+  String? _routeDestination;
+  double? _routeDistanceMeters;
+  bool _routeLoading = false;
+  bool _destinationReached = false;
+  String? _routeError;
 
   static const String _mapStyle =
       'https://tiles.openfreemap.org/styles/liberty';
@@ -702,6 +715,7 @@ class _MapScreenState extends State<MapScreen> {
       );
 
       await _moveToUserLocation();
+      _startLocationStream();
     } catch (e) {
       debugPrint(
         'YATRA location error: $e',
@@ -715,6 +729,643 @@ class _MapScreenState extends State<MapScreen> {
             'Could not get your current location.';
       });
     }
+  }
+
+  void _startLocationStream() {
+    _positionSubscription?.cancel();
+
+    _positionSubscription =
+        Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10,
+      ),
+    ).listen((position) {
+      final LatLng newLocation = LatLng(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _currentLocation = newLocation;
+        _locationReady = true;
+
+        if (_routeDestination != null) {
+          final destination =
+              _heritageLocations[_routeDestination!];
+
+          if (destination != null) {
+            _routeDistanceMeters =
+                Geolocator.distanceBetween(
+              newLocation.latitude,
+              newLocation.longitude,
+              destination.latitude,
+              destination.longitude,
+            );
+          }
+        }
+      });
+
+      _updateMapLibreLocation(
+        position,
+        newLocation,
+      );
+    });
+  }
+
+  Future<void> _searchPlaces() async {
+    final controller = TextEditingController();
+    String query = '';
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final results = _heritageLocations.keys
+                .where((place) {
+                  final city = _placeCities[place] ?? '';
+                  final q = query.trim().toLowerCase();
+                  if (q.isEmpty) return true;
+                  return place.toLowerCase().contains(q) ||
+                      city.toLowerCase().contains(q);
+                })
+                .toList();
+
+            return SafeArea(
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.72,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFFDF8EE),
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(26),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.black26,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(20, 18, 20, 10),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'SEARCH YATRA',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1,
+                            color: Color(0xFF4B3024),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: TextField(
+                        autofocus: true,
+                        controller: controller,
+                        onChanged: (value) {
+                          setSheetState(() => query = value);
+                        },
+                        decoration: InputDecoration(
+                          hintText: 'Search a heritage place or city...',
+                          prefixIcon: const Icon(
+                            Icons.search_rounded,
+                            color: Color(0xFFA6532A),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(15),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                        itemCount: results.length,
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: 8),
+                        itemBuilder: (_, index) {
+                          final place = results[index];
+                          final city = _placeCities[place] ?? '';
+                          return Material(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            child: ListTile(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              leading: const CircleAvatar(
+                                backgroundColor: Color(0xFFF7E8C9),
+                                child: Icon(
+                                  Icons.account_balance_rounded,
+                                  color: Color(0xFFA6532A),
+                                ),
+                              ),
+                              title: Text(
+                                place,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF4B3024),
+                                ),
+                              ),
+                              subtitle: Text(city),
+                              trailing: const Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                size: 15,
+                                color: Color(0xFFA6532A),
+                              ),
+                              onTap: () {
+                                Navigator.pop(sheetContext);
+                                _selectPlaceFromSearch(place);
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    controller.dispose();
+  }
+
+  void _selectPlaceFromSearch(String place) {
+    final city = _placeCities[place] ?? '';
+
+    setState(() {
+      _selectedPlace = place;
+      _selectedCity = city;
+    });
+
+    _goToPlace(place);
+  }
+
+  Future<void> _showRoutePlanner({String? destinationPlace}) async {
+    String fromValue = '__current__';
+    String? toValue = destinationPlace;
+
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final places = _heritageLocations.keys.toList();
+
+            return SafeArea(
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 22),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(26),
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 42,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.black12,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'PLAN YOUR YATRA',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.6,
+                        color: Color(0xFF4B3024),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    const Text(
+                      'Choose where you are coming from and where you want to go.',
+                      style: TextStyle(
+                        color: Colors.black54,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    _routePickerTile(
+                      context: context,
+                      label: 'FROM',
+                      value: fromValue == '__current__'
+                          ? 'My current location'
+                          : fromValue,
+                      icon: Icons.my_location_rounded,
+                      onTap: () async {
+                        final selected = await _chooseRoutePlace(
+                          context,
+                          'SELECT STARTING POINT',
+                          allowCurrentLocation: true,
+                        );
+                        if (selected != null) {
+                          setSheetState(() {
+                            fromValue = selected;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    _routePickerTile(
+                      context: context,
+                      label: 'TO',
+                      value: toValue ?? 'Select destination',
+                      icon: Icons.location_on_rounded,
+                      onTap: () async {
+                        final selected = await _chooseRoutePlace(
+                          context,
+                          'SELECT DESTINATION',
+                        );
+                        if (selected != null) {
+                          setSheetState(() {
+                            toValue = selected;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 18),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: toValue == null || toValue == fromValue
+                            ? null
+                            : () {
+                                Navigator.pop(sheetContext, true);
+                              },
+                        icon: const Icon(Icons.route_rounded),
+                        label: const Text('SHOW ROUTE'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFA6532A),
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor: Colors.black12,
+                          disabledForegroundColor: Colors.black38,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    if (result != true || toValue == null) return;
+
+    final destination = _heritageLocations[toValue!];
+    if (destination == null) return;
+
+    final start = fromValue == '__current__'
+        ? _currentLocation
+        : _heritageLocations[fromValue];
+
+    if (start == null) return;
+
+    final originLabel = fromValue == '__current__'
+        ? 'My Location'
+        : fromValue;
+
+    await _calculateRoute(
+      start: start,
+      startName: originLabel,
+      destination: destination,
+      destinationName: toValue!,
+    );
+  }
+
+  Future<String?> _chooseRoutePlace(
+    BuildContext context,
+    String title, {
+    bool allowCurrentLocation = false,
+  }) async {
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final places = _heritageLocations.keys.toList();
+        return SafeArea(
+          child: Container(
+            constraints: const BoxConstraints(maxHeight: 520),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(26),
+              ),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 42,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.black12,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF4B3024),
+                      ),
+                    ),
+                  ),
+                ),
+                if (allowCurrentLocation)
+                  ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Color(0xFFF7E8C9),
+                      child: Icon(
+                        Icons.my_location_rounded,
+                        color: Color(0xFFA6532A),
+                      ),
+                    ),
+                    title: const Text(
+                      'My current location',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    onTap: () => Navigator.pop(context, '__current__'),
+                  ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: places.length,
+                    itemBuilder: (context, index) {
+                      final place = places[index];
+                      final city = _placeCities[place] ?? '';
+                      return ListTile(
+                        leading: const Icon(
+                          Icons.location_on_outlined,
+                          color: Color(0xFFA6532A),
+                        ),
+                        title: Text(
+                          place,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF4B3024),
+                          ),
+                        ),
+                        subtitle: Text(city),
+                        onTap: () => Navigator.pop(context, place),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _routePickerTile({
+    required BuildContext context,
+    required String label,
+    required String value,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(15),
+      child: Container(
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF9F4EA),
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: const Color(0xFFE7D7C2)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: const Color(0xFFA6532A)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1,
+                      color: Color(0xFFA6532A),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF4B3024),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: Color(0xFFA6532A),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _calculateRoute({
+    required LatLng start,
+    required String startName,
+    required LatLng destination,
+    required String destinationName,
+  }) async {
+    setState(() {
+      _routeLoading = true;
+      _routeError = null;
+      _routeOriginName = startName;
+      _routeDestination = destinationName;
+      _routeDistanceMeters = Geolocator.distanceBetween(
+        _currentLocation.latitude,
+        _currentLocation.longitude,
+        destination.latitude,
+        destination.longitude,
+      );
+      _destinationReached = _routeDistanceMeters! <= 50;
+    });
+
+    try {
+      final uri = Uri.parse(
+        'https://router.project-osrm.org/route/v1/driving/'
+        '${start.longitude},${start.latitude};'
+        '${destination.longitude},${destination.latitude}'
+        '?overview=full&geometries=geojson',
+      );
+
+      final response = await http.get(uri);
+      if (response.statusCode != 200) {
+        throw Exception('Routing service returned ${response.statusCode}.');
+      }
+
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (data['code'] != 'Ok') throw Exception('No route found.');
+
+      final routes = data['routes'] as List<dynamic>;
+      if (routes.isEmpty) throw Exception('No route found.');
+
+      final route = routes.first as Map<String, dynamic>;
+      final geometry = route['geometry'] as Map<String, dynamic>;
+      final coordinates = geometry['coordinates'] as List<dynamic>;
+
+      final points = coordinates.map((point) {
+        final values = point as List<dynamic>;
+        return LatLng(
+          (values[1] as num).toDouble(),
+          (values[0] as num).toDouble(),
+        );
+      }).toList();
+
+      final controller = _mapController;
+      if (controller == null || points.isEmpty) {
+        throw Exception('Map is not ready.');
+      }
+
+      if (_routeLine != null) {
+        await controller.removeLine(_routeLine!);
+      }
+
+      _routeLine = await controller.addLine(
+        LineOptions(
+          geometry: points,
+          lineColor: '#A6532A',
+          lineWidth: 5.0,
+          lineOpacity: 0.9,
+        ),
+      );
+
+      if (!mounted) return;
+
+      final liveDistance = Geolocator.distanceBetween(
+        _currentLocation.latitude,
+        _currentLocation.longitude,
+        destination.latitude,
+        destination.longitude,
+      );
+
+      setState(() {
+        _routeDistanceMeters = liveDistance;
+        _destinationReached = liveDistance <= 50;
+        _routeLoading = false;
+      });
+
+      await controller.animateCamera(
+        CameraUpdate.newLatLngBounds(
+          LatLngBounds(
+            southwest: LatLng(
+              points.map((p) => p.latitude).reduce((a, b) => a < b ? a : b),
+              points.map((p) => p.longitude).reduce((a, b) => a < b ? a : b),
+            ),
+            northeast: LatLng(
+              points.map((p) => p.latitude).reduce((a, b) => a > b ? a : b),
+              points.map((p) => p.longitude).reduce((a, b) => a > b ? a : b),
+            ),
+          ),
+          top: 100,
+          right: 70,
+          bottom: 180,
+          left: 70,
+        ),
+      );
+    } catch (e) {
+      debugPrint('YATRA routing error: $e');
+      if (!mounted) return;
+      setState(() {
+        _routeLoading = false;
+        _routeError = 'Could not calculate the route right now.';
+      });
+    }
+  }
+
+  Future<void> _routeToSelectedPlace() async {
+    if (_selectedPlace == null) return;
+    await _showRoutePlanner(destinationPlace: _selectedPlace);
+  }
+
+  Future<void> _clearRoute() async {
+    final controller = _mapController;
+
+    if (controller != null && _routeLine != null) {
+      try {
+        await controller.removeLine(_routeLine!);
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _routeLine = null;
+      _routeOriginName = null;
+      _routeDestination = null;
+      _routeDistanceMeters = null;
+      _destinationReached = false;
+      _routeError = null;
+      _routeLoading = false;
+    });
+  }
+
+  String _formatDistance(double meters) {
+    if (meters < 1000) {
+      return '${meters.round()} m';
+    }
+
+    return '${(meters / 1000).toStringAsFixed(1)} km';
   }
 
   Future<void> _updateMapLibreLocation(
@@ -1377,6 +2028,12 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _positionSubscription?.cancel();
+    super.dispose();
+  }
+
   Future<void> _retryLocation() async {
     await _getUserLocation();
   }
@@ -1520,6 +2177,54 @@ class _MapScreenState extends State<MapScreen> {
           ),
 
           // ====================================================
+          // SEARCH
+          // ====================================================
+
+          Positioned(
+            top: 88,
+            right: 16,
+            child: Material(
+              color: Colors.white.withValues(alpha: 0.96),
+              borderRadius: BorderRadius.circular(15),
+              elevation: 4,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(15),
+                onTap: _searchPlaces,
+                child: const Padding(
+                  padding: EdgeInsets.all(13),
+                  child: Icon(
+                    Icons.search_rounded,
+                    color: Color(0xFFA6532A),
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          Positioned(
+            top: 140,
+            right: 16,
+            child: Material(
+              color: Colors.white.withValues(alpha: 0.96),
+              borderRadius: BorderRadius.circular(15),
+              elevation: 4,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(15),
+                onTap: () => _showRoutePlanner(),
+                child: const Padding(
+                  padding: EdgeInsets.all(13),
+                  child: Icon(
+                    Icons.route_rounded,
+                    color: Color(0xFFA6532A),
+                    size: 24,
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // ====================================================
           // LOCATION LOADING
           // ====================================================
 
@@ -1607,10 +2312,96 @@ class _MapScreenState extends State<MapScreen> {
             ),
 
           // ====================================================
+          // ROUTE STATUS
+          // ====================================================
+
+          if (_routeDestination != null)
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 13,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.96),
+                  borderRadius: BorderRadius.circular(17),
+                  boxShadow: const [
+                    BoxShadow(
+                      blurRadius: 14,
+                      offset: Offset(0, 4),
+                      color: Colors.black26,
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.route_rounded,
+                      color: Color(0xFFA6532A),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _routeLoading
+                                ? 'Calculating route...'
+                                : '${_routeOriginName ?? 'My Location'} → $_routeDestination',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF4B3024),
+                            ),
+                          ),
+                          if (!_routeLoading &&
+                              _destinationReached)
+                            const Text(
+                              'You have reached your destination 🎉',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFA6532A),
+                              ),
+                            )
+                          else if (!_routeLoading &&
+                              _routeDistanceMeters != null)
+                            Text(
+                              'Distance to destination: ${_formatDistance(_routeDistanceMeters!)}',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          if (_routeError != null)
+                            Text(
+                              _routeError!,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.redAccent,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Clear route',
+                      onPressed: _clearRoute,
+                      icon: const Icon(Icons.close_rounded),
+                      color: const Color(0xFFA6532A),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // ====================================================
           // SELECTED PLACE CARD
           // ====================================================
 
-          if (_selectedPlace != null)
+          if (_selectedPlace != null && _routeDestination == null)
             Positioned(
               left: 16,
               right: 16,
@@ -1904,6 +2695,37 @@ class _MapScreenState extends State<MapScreen> {
                     size: 18,
                   ),
                   label: const Text('EXPLORE FOOD NEARBY'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFA6532A),
+                    side: const BorderSide(
+                      color: Color(0xFFA6532A),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 13,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(13),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _routeLoading
+                      ? null
+                      : _routeToSelectedPlace,
+                  icon: const Icon(
+                    Icons.route_rounded,
+                    size: 18,
+                  ),
+                  label: Text(
+                    _routeLoading
+                        ? 'CALCULATING ROUTE...'
+                        : 'ROUTE TO THIS PLACE',
+                  ),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFFA6532A),
                     side: const BorderSide(
