@@ -6,16 +6,14 @@ const { GoogleGenAI } = require("@google/genai");
 
 const app = express();
 
+const PORT = process.env.PORT || 3000;
+
 app.use(cors());
-app.use(express.json({ limit: "15mb" }));
+app.use(express.json({ limit: "20mb" }));
 
 // ============================================================
-// CHECK GEMINI API KEY
+// GEMINI
 // ============================================================
-
-if (!process.env.GEMINI_API_KEY) {
-  console.error("❌ GEMINI_API_KEY is missing from .env");
-}
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
@@ -26,129 +24,549 @@ const ai = new GoogleGenAI({
 // ============================================================
 
 const YATRA_PLACES = [
+  // ---------------- INDORE ----------------
 
-  // ----------------------------------------------------------
-  // INDORE
-  // ----------------------------------------------------------
+  {
+    name: "Rajwada",
+    city: "Indore",
+    location: "Madhya Pradesh",
+    clues:
+      "Historic seven-storey Holkar palace in the old market area of Indore, with a prominent arched entrance and stone/wood architecture.",
+  },
+  {
+    name: "Lal Bagh Palace",
+    city: "Indore",
+    location: "Madhya Pradesh",
+    clues:
+      "Grand Holkar palace in Indore with European-inspired architecture, large palace facade and extensive grounds.",
+  },
+  {
+    name: "Krishnapura Chhatris",
+    city: "Indore",
+    location: "Madhya Pradesh",
+    clues:
+      "Group of ornate memorial cenotaphs near the Khan River in Indore, with domes, arches and detailed stone decoration.",
+  },
+  {
+    name: "Kanch Mandir",
+    city: "Indore",
+    location: "Madhya Pradesh",
+    clues:
+      "Jain temple famous for its interior covered extensively with mirrors and glass decorations.",
+  },
+  {
+    name: "Annapurna Temple",
+    city: "Indore",
+    location: "Madhya Pradesh",
+    clues:
+      "Colorful Hindu temple complex in Indore with an ornate entrance and multiple decorative towers.",
+  },
+  {
+    name: "Bada Ganpati",
+    city: "Indore",
+    location: "Madhya Pradesh",
+    clues:
+      "Historic Ganesh temple in Indore known for its very large Ganesha idol.",
+  },
+  {
+    name: "Gandhi Hall",
+    city: "Indore",
+    location: "Madhya Pradesh",
+    clues:
+      "Historic Indo-European style public building in central Indore with a prominent clock tower and domes.",
+  },
+  {
+    name: "Central Museum",
+    city: "Indore",
+    location: "Madhya Pradesh",
+    clues:
+      "Museum building in Indore containing archaeological and historical collections.",
+  },
+  {
+    name: "Ralamandal Wildlife Sanctuary",
+    city: "Indore",
+    location: "Madhya Pradesh",
+    clues:
+      "Forest and hill landscape near Indore, associated with wildlife and nature rather than a single monument.",
+  },
+  {
+    name: "Pipliyapala Regional Park",
+    city: "Indore",
+    location: "Madhya Pradesh",
+    clues:
+      "Large landscaped recreational park in Indore with gardens, lake and outdoor scenery.",
+  },
 
-  "Rajwada, Indore",
-  "Lal Bagh Palace, Indore",
-  "Krishnapura Chhatris, Indore",
-  "Kanch Mandir, Indore",
-  "Annapurna Temple, Indore",
-  "Bada Ganpati, Indore",
-  "Gandhi Hall, Indore",
-  "Central Museum, Indore",
-  "Ralamandal Wildlife Sanctuary, Indore",
-  "Pipliyapala Regional Park, Indore",
+  // ---------------- JAIPUR ----------------
 
-  // ----------------------------------------------------------
-  // JAIPUR
-  // ----------------------------------------------------------
+  {
+    name: "Hawa Mahal",
+    city: "Jaipur",
+    location: "Rajasthan",
+    clues:
+      "Famous pink sandstone Palace of Winds in Jaipur with a distinctive honeycomb facade and many small windows.",
+  },
+  {
+    name: "Amber Fort",
+    city: "Jaipur",
+    location: "Rajasthan",
+    clues:
+      "Large hilltop fort near Jaipur with massive walls, gates, courtyards and Rajput-Mughal architecture.",
+  },
+  {
+    name: "City Palace Jaipur",
+    city: "Jaipur",
+    location: "Rajasthan",
+    clues:
+      "Royal palace complex in the center of Jaipur with ornate courtyards, gateways and Rajput architecture.",
+  },
+  {
+    name: "Jantar Mantar Jaipur",
+    city: "Jaipur",
+    location: "Rajasthan",
+    clues:
+      "Historic astronomical observatory containing huge geometric stone instruments.",
+  },
+  {
+    name: "Jal Mahal",
+    city: "Jaipur",
+    location: "Rajasthan",
+    clues:
+      "Palace appearing to float in Man Sagar Lake, with a symmetrical sandstone facade.",
+  },
+  {
+    name: "Nahargarh Fort",
+    city: "Jaipur",
+    location: "Rajasthan",
+    clues:
+      "Hilltop fort overlooking Jaipur, with long defensive walls and pale yellow architecture.",
+  },
+  {
+    name: "Jaigarh Fort",
+    city: "Jaipur",
+    location: "Rajasthan",
+    clues:
+      "Large hilltop fort near Amber with massive defensive walls and historic military architecture.",
+  },
+  {
+    name: "Albert Hall Museum",
+    city: "Jaipur",
+    location: "Rajasthan",
+    clues:
+      "Grand Indo-Saracenic museum building in Jaipur with domes, arches and ornate facade.",
+  },
+  {
+    name: "Galtaji Temple",
+    city: "Jaipur",
+    location: "Rajasthan",
+    clues:
+      "Historic Hindu temple complex in a rocky valley near Jaipur, famous for its temples and sacred water tanks.",
+  },
+  {
+    name: "Birla Mandir Jaipur",
+    city: "Jaipur",
+    location: "Rajasthan",
+    clues:
+      "Large white marble Hindu temple in Jaipur with multiple domes and carved marble architecture.",
+  },
 
-  "Hawa Mahal, Jaipur",
-  "Amber Fort, Jaipur",
-  "City Palace Jaipur, Jaipur",
-  "Jantar Mantar Jaipur, Jaipur",
-  "Jal Mahal, Jaipur",
-  "Nahargarh Fort, Jaipur",
-  "Jaigarh Fort, Jaipur",
-  "Albert Hall Museum, Jaipur",
-  "Galtaji Temple, Jaipur",
-  "Birla Mandir Jaipur, Jaipur",
+  // ---------------- MUMBAI ----------------
 
-  // ----------------------------------------------------------
-  // MUMBAI
-  // ----------------------------------------------------------
+  {
+    name: "Gateway of India",
+    city: "Mumbai",
+    location: "Maharashtra",
+    clues:
+      "Iconic monumental arch on Mumbai waterfront overlooking the Arabian Sea. Indo-Saracenic architecture, large central arch and four turrets.",
+  },
+  {
+    name: "Chhatrapati Shivaji Maharaj Terminus",
+    city: "Mumbai",
+    location: "Maharashtra",
+    clues:
+      "Grand historic railway terminus in Mumbai with Victorian Gothic architecture, large central dome, towers and ornate facade.",
+  },
+  {
+    name: "Elephanta Caves",
+    city: "Mumbai",
+    location: "Maharashtra",
+    clues:
+      "Ancient rock-cut cave temples on Elephanta Island, famous for large stone sculptures including Shiva.",
+  },
+  {
+    name: "Chhatrapati Shivaji Maharaj Vastu Sangrahalaya",
+    city: "Mumbai",
+    location: "Maharashtra",
+    clues:
+      "Historic museum in Mumbai with a large Indo-Saracenic building, dome and landscaped grounds.",
+  },
+  {
+    name: "Siddhivinayak Temple",
+    city: "Mumbai",
+    location: "Maharashtra",
+    clues:
+      "Famous Hindu Ganesha temple in Mumbai with a distinctive temple facade and golden dome.",
+  },
+  {
+    name: "Haji Ali Dargah",
+    city: "Mumbai",
+    location: "Maharashtra",
+    clues:
+      "White Islamic shrine located on a small island/causeway in the Arabian Sea near Mumbai.",
+  },
+  {
+    name: "Kanheri Caves",
+    city: "Mumbai",
+    location: "Maharashtra",
+    clues:
+      "Ancient Buddhist rock-cut caves within Sanjay Gandhi National Park, with stone halls and carved structures.",
+  },
+  {
+    name: "Bandra-Worli Sea Link",
+    city: "Mumbai",
+    location: "Maharashtra",
+    clues:
+      "Modern cable-stayed bridge across Mumbai's sea, with distinctive tall pylons and suspension cables.",
+  },
+  {
+    name: "Sanjay Gandhi National Park",
+    city: "Mumbai",
+    location: "Maharashtra",
+    clues:
+      "Large green national park within Mumbai with forest, hills and natural landscapes.",
+  },
+  {
+    name: "Marine Drive",
+    city: "Mumbai",
+    location: "Maharashtra",
+    clues:
+      "Curved Mumbai waterfront promenade along the Arabian Sea, famous for its coastal road and skyline.",
+  },
 
-  "Gateway of India, Mumbai",
-  "Chhatrapati Shivaji Maharaj Terminus, Mumbai",
-  "Elephanta Caves, Mumbai",
-  "Chhatrapati Shivaji Maharaj Vastu Sangrahalaya, Mumbai",
-  "Siddhivinayak Temple, Mumbai",
-  "Haji Ali Dargah, Mumbai",
-  "Kanheri Caves, Mumbai",
-  "Bandra-Worli Sea Link, Mumbai",
-  "Sanjay Gandhi National Park, Mumbai",
-  "Marine Drive, Mumbai",
+  // ---------------- MYSURU ----------------
 
-  // ----------------------------------------------------------
-  // MYSURU
-  // ----------------------------------------------------------
+  {
+    name: "Mysore Palace",
+    city: "Mysuru",
+    location: "Karnataka",
+    clues:
+      "Magnificent royal palace in Mysuru with Indo-Saracenic architecture, large central dome and ornate towers.",
+  },
+  {
+    name: "Chamundi Hill",
+    city: "Mysuru",
+    location: "Karnataka",
+    clues:
+      "Prominent hill overlooking Mysuru, associated with Chamundeshwari Temple and a large Nandi statue.",
+  },
+  {
+    name: "Chamundeshwari Temple",
+    city: "Mysuru",
+    location: "Karnataka",
+    clues:
+      "Major Hindu temple on Chamundi Hill with a tall colorful Dravidian-style gopuram.",
+  },
+  {
+    name: "St. Philomena Cathedral",
+    city: "Mysuru",
+    location: "Karnataka",
+    clues:
+      "Large neo-Gothic Catholic cathedral in Mysuru with two very tall pointed towers.",
+  },
+  {
+    name: "Jaganmohan Palace",
+    city: "Mysuru",
+    location: "Karnataka",
+    clues:
+      "Historic royal palace in Mysuru with ornate facade and Indo-European architectural features.",
+  },
+  {
+    name: "Karanji Lake",
+    city: "Mysuru",
+    location: "Karnataka",
+    clues:
+      "Scenic lake and nature area near Mysuru with water, trees and walking areas.",
+  },
+  {
+    name: "Railway Museum Mysuru",
+    city: "Mysuru",
+    location: "Karnataka",
+    clues:
+      "Railway heritage museum displaying historic locomotives, coaches and railway equipment.",
+  },
+  {
+    name: "Devaraja Market",
+    city: "Mysuru",
+    location: "Karnataka",
+    clues:
+      "Historic colorful market in Mysuru with shops, flower stalls and traditional market architecture.",
+  },
+  {
+    name: "Lalitha Mahal Palace",
+    city: "Mysuru",
+    location: "Karnataka",
+    clues:
+      "Elegant white palace near Mysuru inspired by European architecture, with a prominent central dome.",
+  },
+  {
+    name: "Mysuru Zoo",
+    city: "Mysuru",
+    location: "Karnataka",
+    clues:
+      "Large zoological garden in Mysuru with landscaped paths, trees and animal enclosures.",
+  },
 
-  "Mysore Palace, Mysuru",
-  "Chamundi Hill, Mysuru",
-  "Chamundeshwari Temple, Mysuru",
-  "St. Philomena Cathedral, Mysuru",
-  "Jaganmohan Palace, Mysuru",
-  "Karanji Lake, Mysuru",
-  "Railway Museum Mysuru, Mysuru",
-  "Devaraja Market, Mysuru",
-  "Lalitha Mahal Palace, Mysuru",
-  "Mysuru Zoo, Mysuru",
+  // ---------------- BHOPAL ----------------
 
-  // ----------------------------------------------------------
-  // BHOPAL
-  // ----------------------------------------------------------
+  {
+    name: "Taj-ul-Masajid",
+    city: "Bhopal",
+    location: "Madhya Pradesh",
+    clues:
+      "Huge pink mosque in Bhopal with two tall minarets, large domes and a broad courtyard.",
+  },
+  {
+    name: "Upper Lake",
+    city: "Bhopal",
+    location: "Madhya Pradesh",
+    clues:
+      "Large lake in Bhopal with broad water views, shoreline and surrounding city landscape.",
+  },
+  {
+    name: "Van Vihar National Park",
+    city: "Bhopal",
+    location: "Madhya Pradesh",
+    clues:
+      "Urban national park near Upper Lake in Bhopal with forest and wildlife landscapes.",
+  },
+  {
+    name: "Bharat Bhavan",
+    city: "Bhopal",
+    location: "Madhya Pradesh",
+    clues:
+      "Multidisciplinary arts center in Bhopal with distinctive modern architecture and lake views.",
+  },
+  {
+    name: "Tribal Museum Bhopal",
+    city: "Bhopal",
+    location: "Madhya Pradesh",
+    clues:
+      "Museum showcasing tribal culture, art, architecture and traditional displays in Bhopal.",
+  },
+  {
+    name: "Gohar Mahal",
+    city: "Bhopal",
+    location: "Madhya Pradesh",
+    clues:
+      "Historic palace on the Upper Lake in Bhopal with traditional Mughal and Rajput architectural details.",
+  },
+  {
+    name: "Moti Masjid Bhopal",
+    city: "Bhopal",
+    location: "Madhya Pradesh",
+    clues:
+      "Historic mosque in Bhopal with white facade, domes and Islamic architectural elements.",
+  },
+  {
+    name: "Sadar Manzil",
+    city: "Bhopal",
+    location: "Madhya Pradesh",
+    clues:
+      "Historic royal building in the old city of Bhopal associated with the Nawabs.",
+  },
+  {
+    name: "Birla Mandir Bhopal",
+    city: "Bhopal",
+    location: "Madhya Pradesh",
+    clues:
+      "Hindu temple on a hill in Bhopal with pale sandstone architecture and views of the city.",
+  },
+  {
+    name: "Regional Science Centre Bhopal",
+    city: "Bhopal",
+    location: "Madhya Pradesh",
+    clues:
+      "Science museum and educational center in Bhopal with exhibits and modern buildings.",
+  },
 
-  "Taj-ul-Masajid, Bhopal",
-  "Upper Lake, Bhopal",
-  "Van Vihar National Park, Bhopal",
-  "Bharat Bhavan, Bhopal",
-  "Tribal Museum Bhopal, Bhopal",
-  "Gohar Mahal, Bhopal",
-  "Moti Masjid Bhopal, Bhopal",
-  "Sadar Manzil, Bhopal",
-  "Birla Mandir Bhopal, Bhopal",
-  "Regional Science Centre Bhopal, Bhopal",
+  // ---------------- OTHER YATRA PLACES ----------------
+
+  {
+    name: "Khajuraho Temples",
+    city: "Khajuraho",
+    location: "Madhya Pradesh",
+    clues:
+      "Famous group of ancient sandstone Hindu and Jain temples with extremely detailed exterior carvings and tall temple towers.",
+  },
+  {
+    name: "Taj Mahal",
+    city: "Agra",
+    location: "Uttar Pradesh",
+    clues:
+      "World-famous white marble mausoleum in Agra with a huge central onion dome, four minarets and a symmetrical garden setting.",
+  },
+  {
+    name: "Red Fort",
+    city: "Delhi",
+    location: "Delhi",
+    clues:
+      "Massive red sandstone Mughal fort in Old Delhi with enormous red walls, monumental gates and historic palace structures.",
+  },
+  {
+    name: "Charminar",
+    city: "Hyderabad",
+    location: "Telangana",
+    clues:
+      "Iconic Hyderabad monument with four tall minarets, four large arches and a square symmetrical structure.",
+  },
+  {
+    name: "Sanchi Stupa",
+    city: "Sanchi",
+    location: "Madhya Pradesh",
+    clues:
+      "Ancient Buddhist hemispherical stone stupa at Sanchi with carved gateways surrounding the monument.",
+  },
 ];
 
 // ============================================================
-// TEST ROUTE
+// HELPERS
+// ============================================================
+
+function normalizeText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function findYatraPlace(name, city) {
+  const normalizedName = normalizeText(name);
+  const normalizedCity = normalizeText(city);
+
+  if (!normalizedName) {
+    return null;
+  }
+
+  // Exact name + city
+  let match = YATRA_PLACES.find(
+    (place) =>
+      normalizeText(place.name) === normalizedName &&
+      normalizeText(place.city) === normalizedCity
+  );
+
+  if (match) return match;
+
+  // Exact name only
+  match = YATRA_PLACES.find(
+    (place) =>
+      normalizeText(place.name) === normalizedName
+  );
+
+  if (match) return match;
+
+  // Name contained in model answer
+  match = YATRA_PLACES.find((place) => {
+    const candidate = normalizeText(place.name);
+
+    return (
+      normalizedName.includes(candidate) ||
+      candidate.includes(normalizedName)
+    );
+  });
+
+  return match || null;
+}
+
+function extractJson(text) {
+  if (!text) {
+    throw new Error("Gemini returned an empty response.");
+  }
+
+  let cleaned = text.trim();
+
+  cleaned = cleaned
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch (_) {
+    const start = cleaned.indexOf("{");
+    const end = cleaned.lastIndexOf("}");
+
+    if (start !== -1 && end !== -1 && end > start) {
+      return JSON.parse(
+        cleaned.substring(start, end + 1)
+      );
+    }
+
+    throw new Error(
+      "Could not parse Gemini JSON response."
+    );
+  }
+}
+
+// ============================================================
+// HEALTH CHECK
 // ============================================================
 
 app.get("/", (req, res) => {
   res.json({
-    message: "YATRA AI backend is running!",
-    supportedPlaces: YATRA_PLACES.length,
+    status: "ok",
+    service: "YATRA AI Backend",
+    recognitionPlaces: YATRA_PLACES.length,
+    endpoints: [
+      "POST /recognize-place",
+      "POST /generate-story",
+    ],
   });
 });
 
 // ============================================================
-// GENERATE AI STORY
+// GENERATE STORY
 // ============================================================
 
 app.post("/generate-story", async (req, res) => {
   try {
-    const { place } = req.body;
+    const {
+      name,
+      city,
+      state,
+      location,
+    } = req.body;
 
-    console.log("=================================");
-    console.log("YATRA AI request received");
-    console.log("Place:", place);
-    console.log("=================================");
-
-    if (!place) {
+    if (!name) {
       return res.status(400).json({
-        error: "Place name is required",
+        error: "Place name is required.",
       });
     }
 
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({
-        error: "Gemini API key is missing",
+        error: "GEMINI_API_KEY is not configured.",
       });
     }
 
+    const placeCity = city || location || "";
+    const placeState = state || "";
+
     const prompt = `
-You are YATRA AI, an Indian heritage and tourism guide.
+You are YATRA AI, an expert Indian heritage historian and tourism storyteller.
 
-Explain the following place for a tourist:
+Create an accurate, engaging and visitor-friendly story for:
 
-${place}
+Place: ${name}
+City: ${placeCity}
+State: ${placeState}
 
-Give a detailed but easy-to-understand explanation.
-
-Use these sections:
+Return EXACTLY these six sections:
 
 THE STORY
 HISTORY
@@ -158,222 +576,403 @@ DID YOU KNOW?
 VISITOR CONTEXT
 
 Rules:
-- Keep the information factual.
+- Focus specifically on the requested place.
 - Do not invent facts.
-- Use simple and engaging language.
-- Give enough detail to make the explanation useful for a tourist.
-- If you are uncertain about a fact, do not state it as certain.
+- Keep historical details accurate.
+- Make the writing engaging but suitable for a tourism application.
+- Mention important historical figures or events only when relevant.
+- Architecture should describe visible and historically important features.
+- DID YOU KNOW? should contain interesting but reliable facts.
+- VISITOR CONTEXT should help a tourist understand why the place matters.
+- Do not include markdown tables.
 `;
 
-    console.log("Sending request to Gemini...");
+    const response =
+      await ai.models.generateContent({
+        model: "gemini-2.5-flash-lite",
+        contents: prompt,
+      });
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash-lite",
-      contents: prompt,
-    });
+    const text =
+      response.text || "";
 
-    console.log("Gemini response received successfully.");
-
-    const story = response.text;
-
-    if (!story) {
-      throw new Error("Gemini returned an empty response.");
+    if (!text.trim()) {
+      throw new Error(
+        "Gemini returned an empty story."
+      );
     }
 
-    res.status(200).json({
-      place: place,
-      story: story,
+    return res.json({
+      success: true,
+      name,
+      city: placeCity,
+      state: placeState,
+      story: text.trim(),
     });
-
   } catch (error) {
-    console.error("");
-    console.error("========== GEMINI ERROR ==========");
-    console.error(error);
-    console.error("==================================");
-    console.error("");
+    console.error(
+      "STORY GENERATION ERROR:",
+      error
+    );
 
-    res.status(500).json({
-      error: "Failed to generate story",
-      details: error?.message || String(error),
+    return res.status(500).json({
+      success: false,
+      error:
+        error?.message ||
+        "Failed to generate story.",
     });
   }
 });
 
 // ============================================================
-// AI PLACE RECOGNITION
+// RECOGNIZE PLACE
 // ============================================================
 
 app.post("/recognize-place", async (req, res) => {
   try {
-    const { imageBase64, mimeType } = req.body;
+    const {
+      imageBase64,
+      mimeType,
+    } = req.body;
 
-    console.log("=================================");
-    console.log("YATRA AI image recognition request");
-    console.log("=================================");
+    console.log("");
+    console.log(
+      "========================================"
+    );
+    console.log(
+      "YATRA AI IMAGE RECOGNITION REQUEST"
+    );
+    console.log(
+      "========================================"
+    );
 
     if (!imageBase64) {
       return res.status(400).json({
-        error: "Image is required",
+        success: false,
+        error: "imageBase64 is required.",
       });
     }
 
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({
-        error: "Gemini API key is missing",
+        success: false,
+        error: "GEMINI_API_KEY is not configured.",
       });
     }
 
-    const supportedPlacesText = YATRA_PLACES
-      .map((place) => `- ${place}`)
-      .join("\n");
+    const safeMimeType =
+      typeof mimeType === "string" &&
+      mimeType.startsWith("image/")
+        ? mimeType
+        : "image/jpeg";
+
+    console.log(
+      "Image MIME type:",
+      safeMimeType
+    );
+
+    console.log(
+      "Image base64 length:",
+      imageBase64.length
+    );
+
+    const candidateList =
+      YATRA_PLACES.map(
+        (place, index) =>
+          `${index + 1}. ${place.name} — ${place.city}, ${place.location}\n` +
+          `Visual clues: ${place.clues}`
+      ).join("\n\n");
+
+    // --------------------------------------------------------
+    // STRONGER VISUAL RECOGNITION PROMPT
+    // --------------------------------------------------------
 
     const prompt = `
-You are YATRA AI, an Indian heritage and tourism recognition assistant.
+You are the visual recognition engine for YATRA, an Indian heritage tourism application.
 
-Look carefully at the supplied image.
+Analyze the supplied monument photograph carefully.
 
-Your job is to identify whether the image shows one of the places supported by YATRA.
-
-YATRA currently supports these places:
-
-${supportedPlacesText}
+Your job is to identify which ONE of the supported YATRA places is shown in the image.
 
 IMPORTANT:
-- Compare the visual features of the image carefully with the supported places.
-- Prefer a supported place ONLY when the image genuinely matches.
-- Do not invent a place name.
-- Do not return a place that is not in the supported list.
-- If the image does not clearly match a supported place, return "Unknown place".
-- If the image is unclear, use a lower confidence value.
+- Actually inspect the IMAGE.
+- Do not answer based only on the text list.
+- Compare the architecture, silhouette, facade, domes, arches, towers, minarets, color, surroundings and other visible landmarks.
+- Prefer the visually strongest match.
+- The image may be a tourist photograph taken from an unusual angle.
+- Ignore weather, lighting, image quality and minor obstructions.
+- Do not confuse a generic temple, palace or monument with another place just because the architectural style is similar.
+- If the monument is clearly recognizable as one of the candidates, select that candidate.
+- If the image is genuinely unrelated to all candidates, return UNKNOWN.
 
-Return ONLY valid JSON in exactly this format:
+SUPPORTED YATRA PLACES:
+
+${candidateList}
+
+RETURN ONLY JSON:
 
 {
-  "name": "Place name",
-  "city": "City",
-  "state": "State",
-  "confidence": 0.00
+  "name": "exact supported place name",
+  "city": "exact supported city",
+  "confidence": 0.0,
+  "visual_reason": "short explanation of the visual evidence"
 }
 
-For an unsupported or unclear image, return:
+For UNKNOWN:
 
 {
   "name": "Unknown place",
   "city": "",
-  "state": "",
-  "confidence": 0.00
+  "confidence": 0.0,
+  "visual_reason": "why none of the supported places can be identified"
 }
 
-Rules:
-- confidence must be a number between 0 and 1.
-- Do not include markdown.
-- Do not include explanations.
-- The "name" must exactly match one of the supported place names above OR be "Unknown place".
-- The city must correspond to the selected supported place.
+VERY IMPORTANT:
+The "name" MUST be copied exactly from the supported list when a match exists.
+Do not invent a new monument name.
+Do not return a generic category such as "Indian temple".
 `;
 
-    console.log("Sending image to Gemini...");
+    // --------------------------------------------------------
+    // GEMINI VISION CALL
+    // --------------------------------------------------------
 
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash-lite",
+    const response =
+      await ai.models.generateContent({
+        model: "gemini-2.5-flash",
 
-      contents: [
-        {
-          inlineData: {
-            mimeType: mimeType || "image/jpeg",
-            data: imageBase64,
+        contents: [
+          {
+            inlineData: {
+              mimeType: safeMimeType,
+              data: imageBase64,
+            },
+          },
+          {
+            text: prompt,
+          },
+        ],
+
+        config: {
+          responseMimeType:
+            "application/json",
+
+          responseSchema: {
+            type: "object",
+
+            properties: {
+              name: {
+                type: "string",
+              },
+
+              city: {
+                type: "string",
+              },
+
+              confidence: {
+                type: "number",
+              },
+
+              visual_reason: {
+                type: "string",
+              },
+            },
+
+            required: [
+              "name",
+              "city",
+              "confidence",
+              "visual_reason",
+            ],
           },
         },
-        {
-          text: prompt,
-        },
-      ],
-    });
-
-    console.log("Gemini recognition response received.");
-
-    let resultText = response.text?.trim();
-
-    if (!resultText) {
-      throw new Error("Gemini returned an empty response.");
-    }
-
-    // Remove markdown code fences if Gemini adds them.
-    resultText = resultText
-      .replace(/^```json\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/```\s*$/i, "")
-      .trim();
-
-    const result = JSON.parse(resultText);
-
-    // ========================================================
-    // VALIDATE AI RESULT
-    // ========================================================
-
-    if (!result.name) {
-      throw new Error("AI response did not contain a place name.");
-    }
-
-    // Unknown place is valid.
-    if (result.name === "Unknown place") {
-      return res.status(200).json({
-        name: "Unknown place",
-        city: "",
-        state: "",
-        confidence: 0,
       });
-    }
 
-    // Make sure AI returned a supported place.
-    const matchedPlace = YATRA_PLACES.find(
-      (place) => place === `${result.name}, ${result.city}`
+    const rawText =
+      response.text || "";
+
+    console.log("");
+    console.log(
+      "RAW GEMINI RECOGNITION:"
     );
+    console.log(rawText);
 
-    if (!matchedPlace) {
-      console.log("Unsupported AI result:", result);
+    if (!rawText.trim()) {
+      throw new Error(
+        "Gemini returned an empty recognition response."
+      );
+    }
 
-      return res.status(200).json({
-        name: "Unknown place",
-        city: "",
-        state: "",
-        confidence: 0,
+    // --------------------------------------------------------
+    // PARSE RESULT
+    // --------------------------------------------------------
+
+    let result;
+
+    try {
+      result = extractJson(rawText);
+    } catch (parseError) {
+      console.error(
+        "JSON PARSE ERROR:",
+        parseError
+      );
+
+      return res.status(500).json({
+        success: false,
+        error:
+          "AI returned an invalid recognition result.",
+        raw: rawText,
       });
     }
 
-    // Normalize confidence.
-    let confidence = Number(result.confidence);
+    const detectedName =
+      String(result.name || "").trim();
+
+    const detectedCity =
+      String(result.city || "").trim();
+
+    const visualReason =
+      String(
+        result.visual_reason || ""
+      ).trim();
+
+    let confidence =
+      Number(result.confidence);
 
     if (!Number.isFinite(confidence)) {
       confidence = 0;
     }
 
-    confidence = Math.max(
+    confidence = clamp(
+      confidence,
       0,
-      Math.min(1, confidence)
+      1
     );
 
-    const finalResult = {
-      name: result.name,
-      city: result.city,
-      state: result.state,
-      confidence: confidence,
-    };
+    console.log("");
+    console.log(
+      "GEMINI DETECTED:",
+      detectedName
+    );
 
-    console.log("Recognized place:", finalResult);
+    console.log(
+      "GEMINI CITY:",
+      detectedCity
+    );
 
-    res.status(200).json(finalResult);
+    console.log(
+      "GEMINI CONFIDENCE:",
+      confidence
+    );
 
+    console.log(
+      "VISUAL REASON:",
+      visualReason
+    );
+
+    // --------------------------------------------------------
+    // MATCH AGAINST YATRA DATABASE
+    // --------------------------------------------------------
+
+    const matchedPlace =
+      findYatraPlace(
+        detectedName,
+        detectedCity
+      );
+
+    // --------------------------------------------------------
+    // UNKNOWN
+    // --------------------------------------------------------
+
+    if (!matchedPlace) {
+      console.log(
+        "RESULT: UNKNOWN PLACE"
+      );
+
+      console.log(
+        "========================================"
+      );
+
+      return res.json({
+        success: true,
+        name: "Unknown place",
+        city: "",
+        state: "",
+        confidence: 0,
+        visualReason:
+          visualReason ||
+          "The image could not be confidently matched to a supported YATRA place.",
+      });
+    }
+
+    // --------------------------------------------------------
+    // SUCCESS
+    // --------------------------------------------------------
+
+    // Make the confidence slightly conservative.
+    // We do NOT blindly show 98/99% for every result.
+    const finalConfidence =
+      clamp(
+        confidence,
+        0,
+        1
+      );
+
+    console.log(
+      "MATCHED YATRA PLACE:",
+      matchedPlace.name
+    );
+
+    console.log(
+      "MATCHED CITY:",
+      matchedPlace.city
+    );
+
+    console.log(
+      "FINAL CONFIDENCE:",
+      finalConfidence
+    );
+
+    console.log(
+      "========================================"
+    );
+
+    return res.json({
+      success: true,
+
+      name: matchedPlace.name,
+
+      city: matchedPlace.city,
+
+      state: matchedPlace.location,
+
+      confidence:
+        Number(
+          finalConfidence.toFixed(2)
+        ),
+
+      visualReason:
+        visualReason ||
+        `Visual features matched ${matchedPlace.name}.`,
+    });
   } catch (error) {
     console.error("");
-    console.error("========== RECOGNITION ERROR ==========");
+    console.error(
+      "========================================"
+    );
+    console.error(
+      "YATRA AI RECOGNITION ERROR"
+    );
     console.error(error);
-    console.error("=======================================");
-    console.error("");
+    console.error(
+      "========================================"
+    );
 
-    res.status(500).json({
-      error: "Failed to recognize place",
-      details: error?.message || String(error),
+    return res.status(500).json({
+      success: false,
+      error:
+        error?.message ||
+        "Failed to recognize place.",
     });
   }
 });
@@ -382,17 +981,30 @@ Rules:
 // START SERVER
 // ============================================================
 
-const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
   console.log("");
-  console.log("=================================");
-  console.log("YATRA AI backend is running!");
-  console.log(`http://localhost:${PORT}`);
-  console.log(`Supported places: ${YATRA_PLACES.length}`);
-  console.log("=================================");
-  console.log("");
+  console.log(
+    "========================================"
+  );
+  console.log(
+    "YATRA AI BACKEND IS RUNNING"
+  );
+  console.log(
+    "========================================"
+  );
+  console.log(
+    `Port: ${PORT}`
+  );
+  console.log(
+    `Recognition places: ${YATRA_PLACES.length}`
+  );
+  console.log(
+    "Recognition model: gemini-2.5-flash"
+  );
+  console.log(
+    "Story model: gemini-2.5-flash-lite"
+  );
+  console.log(
+    "========================================"
+  );
 });
-
-// Keep Node process alive.
-process.stdin.resume();
